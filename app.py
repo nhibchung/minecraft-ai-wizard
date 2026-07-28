@@ -3,9 +3,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datasets import load_dataset
-from langchain_community.embeddings import HuggingFaceInferenceAPIEmbeddings
+from langchain_huggingface import HuggingFaceEndpointEmbeddings, HuggingFaceEndpoint
 from langchain_community.vectorstores import FAISS
-from langchain_community.llms import HuggingFaceHub
 from langchain_classic.chains import RetrievalQA
 from dotenv import load_dotenv
 
@@ -29,16 +28,17 @@ if not HF_TOKEN:
     print("WARNING: HF_TOKEN environment variable is missing!")
 
 # 1. Initialize LangChain Serverless Embeddings API
-embeddings = HuggingFaceInferenceAPIEmbeddings(
-    api_key=HF_TOKEN, 
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
+embeddings = HuggingFaceEndpointEmbeddings(
+    huggingfacehub_api_token=HF_TOKEN, 
+    model="sentence-transformers/all-MiniLM-L6-v2"
 )
 
 # 2. Initialize LangChain Serverless Text Generation API (LLM)
-llm = HuggingFaceHub(
+llm = HuggingFaceEndpoint(
     repo_id="HuggingFaceH4/zephyr-7b-beta",
     huggingfacehub_api_token=HF_TOKEN,
-    model_kwargs={"temperature": 0.3, "max_new_tokens": 120}
+    temperature=0.3,
+    max_new_tokens=120
 )
 
 qa_chain = None
