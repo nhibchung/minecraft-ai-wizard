@@ -122,7 +122,7 @@ def home():
 @app.options("/chat")
 async def options_chat():
     """Handle CORS preflight requests for /chat endpoint"""
-    return {}
+    return {"status": "ok"}
 
 @app.post("/chat")
 async def chat(query: ChatQuery):
