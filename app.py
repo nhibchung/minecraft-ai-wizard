@@ -115,6 +115,11 @@ Answer: Respond in a funny, friendly, video-game-character style! Keep it focuse
 class ChatQuery(BaseModel):
     question: str
 
+@app.options("/{full_path:path}")
+async def options_handler(full_path: str):
+    """Handle CORS preflight requests for all endpoints"""
+    return {"status": "ok"}
+
 @app.options("/chat")
 async def options_chat():
     """Handle CORS preflight requests for /chat endpoint"""
