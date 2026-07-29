@@ -3,9 +3,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datasets import load_dataset
-from langchain_huggingface import HuggingFaceEndpointEmbeddings, HuggingFaceEndpoint
+from langchain_huggingface import HuggingFaceEndpointEmbeddings, HuggingFaceEndpoint, ChatHuggingFace
 from langchain_community.vectorstores import FAISS
 from langchain_classic.chains import RetrievalQA
+from langchain_core.prompts import PromptTemplate
 from dotenv import load_dotenv
 
 # Load local environment variables if testing on your computer
@@ -34,12 +35,17 @@ embeddings = HuggingFaceEndpointEmbeddings(
 )
 
 # 2. Initialize LangChain Serverless Text Generation API (LLM)
-llm = HuggingFaceEndpoint(
-    repo_id="HuggingFaceH4/zephyr-7b-beta",
+# Using Meta Llama 3.3 70B Instruct with conversational task for Groq provider compatibility
+base_llm = HuggingFaceEndpoint(
+    repo_id="meta-llama/Llama-3.3-70B-Instruct",
     huggingfacehub_api_token=HF_TOKEN,
-    temperature=0.3,
-    max_new_tokens=120
+    temperature=0.1,
+    max_new_tokens=256,
+    task="conversational"
 )
+
+# 3. Wrap with ChatHuggingFace to format messages correctly for Groq
+llm = ChatHuggingFace(llm=base_llm)
 
 qa_chain = None
 
@@ -72,11 +78,34 @@ def init_npc_system():
         print(f"Saving compiled FAISS index disk structure to: ./{INDEX_PATH}")
         vector_store.save_local(INDEX_PATH)
     
-    # Connect everything into a seamless Retrieval QA chain
+    # Create a custom prompt template to keep responses focused on Minecraft with a funny, friendly personality
+    minecraft_prompt = PromptTemplate(
+        input_variables=["context", "question"],
+        template="""You are a hilarious and friendly Minecraft NPC wizard! 🧙‍♂️ You LOVE helping players with Minecraft knowledge and you have a playful, witty personality like a video game character.
+
+PERSONALITY TRAITS:
+- Use casual, fun language and occasional emojis
+- Make light jokes and puns related to Minecraft (blocks, mining, creepers, etc.)
+- Be enthusiastic and encouraging!
+- Occasionally use fun phrases like "Huzzah!", "By the way...", "Fun fact:", "Pro tip:", etc. (but vary your responses - don't use them every time!)
+- If someone asks something non-Minecraft, playfully redirect them with humor
+
+IMPORTANT: Answer Minecraft-related questions using the provided context. For recipe questions, use your knowledge of Minecraft crafting to provide accurate answers. Always provide helpful information rather than saying you don't know.
+
+Context from Minecraft Wiki:
+{context}
+
+Question: {question}
+
+Answer: Respond in a funny, friendly, video-game-character style! Keep it focused on Minecraft. Always try to help with Minecraft recipes and crafting questions. If you don't have the info, say something like "Hmm, that's not in my spellbook!" or "I'm stumped - even wizards don't know everything!" 🎮"""
+    )
+    
+    # Connect everything into a seamless Retrieval QA chain with the custom prompt
     qa_chain = RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="stuff",
-        retriever=vector_store.as_retriever(search_kwargs={"k": 2})
+        retriever=vector_store.as_retriever(search_kwargs={"k": 3}),
+        chain_type_kwargs={"prompt": minecraft_prompt}
     )
     print("LangChain NPC System Active and Connected to Render!")
 
