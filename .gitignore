@@ -6,6 +6,9 @@ dist/
 wheels/
 *.egg-info
 
+# Exception: Allow webgl_build/Build folder
+!webgl_build/Build/
+
 # Virtual environments
 .venv
 
