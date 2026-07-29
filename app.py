@@ -115,14 +115,6 @@ Answer: Respond in a funny, friendly, video-game-character style! Keep it focuse
 class ChatQuery(BaseModel):
     question: str
 
-@app.get("/")
-def serve_root():
-    """Serve the WebGL build index.html"""
-    index_path = os.path.join("webgl_build", "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path, media_type="text/html")
-    return {"error": "WebGL build not found"}
-
 @app.options("/chat")
 async def options_chat():
     """Handle CORS preflight requests for /chat endpoint"""
@@ -138,3 +130,31 @@ async def chat(query: ChatQuery):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/")
+def serve_root():
+    """Serve the WebGL build index.html"""
+    index_path = os.path.join("webgl_build", "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path, media_type="text/html")
+    return {"error": "WebGL build not found"}
+
+@app.get("/{full_path:path}")
+async def serve_static(full_path: str):
+    """Serve static files from webgl_build directory"""
+    file_path = os.path.join("webgl_build", full_path)
+    
+    # Security check: prevent directory traversal
+    if not os.path.abspath(file_path).startswith(os.path.abspath("webgl_build")):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    # If it's a file, serve it
+    if os.path.isfile(file_path):
+        return FileResponse(file_path)
+    
+    # If it's a directory or doesn't exist, try serving index.html
+    index_path = os.path.join(file_path, "index.html")
+    if os.path.isfile(index_path):
+        return FileResponse(index_path, media_type="text/html")
+    
+    # If nothing found, return 404
+    raise HTTPException(status_code=404, detail="File not found")
