@@ -2,6 +2,7 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from datasets import load_dataset
 from langchain_huggingface import HuggingFaceEndpointEmbeddings, HuggingFaceEndpoint, ChatHuggingFace
@@ -114,6 +115,14 @@ Answer: Respond in a funny, friendly, video-game-character style! Keep it focuse
 class ChatQuery(BaseModel):
     question: str
 
+@app.get("/")
+def serve_root():
+    """Serve the WebGL build index.html"""
+    index_path = os.path.join("webgl_build", "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path, media_type="text/html")
+    return {"error": "WebGL build not found"}
+
 @app.options("/chat")
 async def options_chat():
     """Handle CORS preflight requests for /chat endpoint"""
@@ -130,6 +139,6 @@ async def chat(query: ChatQuery):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Mount the WebGL build as static files
-# This serves the Unity WebGL build at the root path
+# This serves all the Build assets and TemplateData files
 if os.path.exists("webgl_build"):
-    app.mount("/", StaticFiles(directory="webgl_build", html=True), name="webgl")
+    app.mount("/", StaticFiles(directory="webgl_build"), name="webgl")
