@@ -20,7 +20,7 @@ app = FastAPI(title="Minecraft AI Wizard")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -138,7 +138,3 @@ async def chat(query: ChatQuery):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# Mount the WebGL build as static files
-# This serves all the Build assets and TemplateData files
-if os.path.exists("webgl_build"):
-    app.mount("/", StaticFiles(directory="webgl_build"), name="webgl")
