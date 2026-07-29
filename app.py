@@ -1,6 +1,7 @@
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from datasets import load_dataset
 from langchain_huggingface import HuggingFaceEndpointEmbeddings, HuggingFaceEndpoint, ChatHuggingFace
@@ -19,10 +20,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=3600,
 )
 
 HF_TOKEN = os.getenv("HF_TOKEN")
@@ -133,3 +132,8 @@ async def chat(query: ChatQuery):
         return {"answer": response.strip()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Mount the WebGL build as static files
+# This serves the Unity WebGL build at the root path
+if os.path.exists("webgl_build"):
+    app.mount("/", StaticFiles(directory="webgl_build", html=True), name="webgl")

@@ -14,3 +14,6 @@ wheels/
 
 # Misc
 HFTK.txt
+
+# Unity WebGL Build
+webgl_build/
