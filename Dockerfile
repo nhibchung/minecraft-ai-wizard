@@ -18,9 +18,5 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 # Copy your source code
 COPY . /app
 
-# Copy the WebGL build (if it exists)
-# This assumes your webgl_build folder is in the project root
-COPY ./webgl_build /app/webgl_build
-
 # Render passes a dynamic $PORT variable. We run shell format to evaluate it properly.
 CMD uvicorn app:app --host 0.0.0.0 --port $PORT
