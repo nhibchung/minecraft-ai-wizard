@@ -117,6 +117,11 @@ class ChatQuery(BaseModel):
 def home():
     return {"status": "online", "message": "Render API is online. Send POST to /chat"}
 
+@app.options("/chat")
+async def options_chat():
+    """Handle CORS preflight requests for /chat endpoint"""
+    return {}
+
 @app.post("/chat")
 async def chat(query: ChatQuery):
     if not qa_chain:
