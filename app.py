@@ -51,6 +51,11 @@ PERSONALITY TRAITS:
 - Occasionally use fun phrases like "Huzzah!", "By the way...", "Fun fact:", "Pro tip:", etc. (but vary your responses - don't use them every time!)
 - If someone asks something non-Minecraft, playfully redirect them with humor
 
+RESPONSE LENGTH:
+- Keep responses concise and to the point (maximum 10 sentences)
+- Avoid unnecessary long explanations
+- Be witty and informative - quality over quantity!
+
 IMPORTANT: Answer Minecraft-related questions using the provided context. For recipe questions, use your knowledge of Minecraft crafting to provide accurate answers. Always provide helpful information rather than saying you don't know."""
 
 def cache_system_prompt(prompt_text: str) -> str:
@@ -118,6 +123,45 @@ def get_cache_hit_rate() -> float:
     if total == 0:
         return 0.0
     return (CACHE_STATS["hits"] / total) * 100
+
+def is_response_complete(text: str) -> bool:
+    """
+    Check if a response is complete by verifying it ends with proper punctuation.
+    Returns True if complete, False if incomplete.
+    """
+    if not text:
+        return False
+    
+    # Response is complete if it ends with proper sentence-ending punctuation
+    return text[-1] in (".", "!", "?")
+
+def ensure_complete_response(text: str) -> str:
+    """
+    Ensure response is complete. If incomplete, remove the last incomplete sentence.
+    Returns the complete response or empty string if no complete sentences exist.
+    """
+    if not text:
+        return ""
+    
+    # If already complete, return as-is
+    if is_response_complete(text):
+        return text
+    
+    # Find the last complete sentence (ending with . ! or ?)
+    sentence_endings = (".", "!", "?")
+    last_complete_pos = -1
+    
+    for i in range(len(text) - 1, -1, -1):
+        if text[i] in sentence_endings:
+            last_complete_pos = i
+            break
+    
+    # If no complete sentence found, return empty string
+    if last_complete_pos == -1:
+        return ""
+    
+    # Return text up to and including the last complete sentence
+    return text[:last_complete_pos + 1]
 
 # 1. Initialize LangChain Serverless Embeddings API
 embeddings = HuggingFaceEndpointEmbeddings(
@@ -217,7 +261,8 @@ async def chat(query: ChatQuery):
     Flow:
     1. Check response cache first (instant, 0 tokens)
     2. If not cached, generate response via LLM
-    3. Cache the response for future identical questions
+    3. Ensure response ends with proper punctuation
+    4. Cache the response for future identical questions
     """
     # TIER 2: Check response cache first (instant, 0 tokens)
     cached_response = get_cached_response(query.question)
@@ -235,6 +280,9 @@ async def chat(query: ChatQuery):
         # Generate new response via LLM
         response = qa_chain.run(query.question)
         response_text = response.strip()
+        
+        # Ensure response is complete (remove incomplete sentences if cut off)
+        response_text = ensure_complete_response(response_text)
         
         # Cache the response for next time
         cache_response(query.question, response_text)
