@@ -7,8 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from datasets import load_dataset
-from langchain_huggingface.embeddings import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
+from langchain_community.retrievers import BM25Retriever
 from langchain_classic.chains import RetrievalQA
 from langchain_core.prompts import PromptTemplate
 from langchain_groq import ChatGroq
@@ -168,25 +167,7 @@ def ensure_complete_response(text: str) -> str:
     # Return text up to and including the last complete sentence
     return text[:last_complete_pos + 1]
 
-# 1. Initialize LangChain Local Embeddings (no API credits required!)
-# Using sentence-transformers/all-MiniLM-L6-v2 - runs locally on CPU
-print("Initializing local embeddings...")
-try:
-    # Pre-load the model to ensure it's available before app starts
-    import sentence_transformers
-    print("Pre-loading embedding model (this may take 30-60 seconds on first run)...")
-    embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
-    )
-    print("✓ Embedding model loaded successfully")
-except ImportError:
-    print("ERROR: sentence-transformers not installed. Install with: pip install sentence-transformers")
-    raise
-except Exception as e:
-    print(f"ERROR: Failed to load embeddings: {e}")
-    raise
-
-# 2. Initialize Groq LLM (completely free, no credits needed!)
+# 1. Initialize Groq LLM (completely free, no credits needed!)
 # Using Llama 3.1 70B - fastest inference available
 llm = ChatGroq(
     model="llama-3.1-70b-versatile",
@@ -196,38 +177,25 @@ llm = ChatGroq(
 )
 
 qa_chain = None
+bm25_retriever = None
 
 @app.on_event("startup")
 def init_npc_system():
-    global qa_chain
+    global qa_chain, bm25_retriever
     
     # Cache the system prompt on startup
     cache_system_prompt(MINECRAFT_SYSTEM_PROMPT)
     
-    # Render's free tier wipes ephemeral disks on sleep. 
-    # If the index isn't found, it safely rebuilds it in under 15 seconds.
-    if os.path.exists(INDEX_PATH):
-        print("Found local FAISS index folder! Loading directly to CPU RAM...")
-        vector_store = FAISS.load_local(
-            INDEX_PATH, 
-            embeddings, 
-            allow_dangerous_deserialization=True
-        )
-    else:
-        print("No saved index found. Building index from scratch...")
-        print("Loading text data from Hugging Face...")
-        dataset = load_dataset("lparkourer10/minecraft-wiki", split="train[:400]")
-        
-        texts = []
-        for row in dataset:
-            combined = f"Question: {row['question']}\nAnswer: {row['answer']}"
-            texts.append(combined)
-            
-        print("Building LangChain Vector Index via Serverless Embeddings...")
-        vector_store = FAISS.from_texts(texts, embeddings)
-        
-        print(f"Saving compiled FAISS index disk structure to: ./{INDEX_PATH}")
-        vector_store.save_local(INDEX_PATH)
+    print("Loading text data from Hugging Face...")
+    dataset = load_dataset("lparkourer10/minecraft-wiki", split="train[:400]")
+    
+    texts = []
+    for row in dataset:
+        combined = f"Question: {row['question']}\nAnswer: {row['answer']}"
+        texts.append(combined)
+    
+    print("Building BM25 retriever (lightweight keyword search)...")
+    bm25_retriever = BM25Retriever.from_texts(texts)
     
     # Create a custom prompt template to keep responses focused on Minecraft with a funny, friendly personality
     # Using the cached system prompt to avoid re-processing it
@@ -247,10 +215,10 @@ Answer: Respond in a funny, friendly, video-game-character style! Keep it focuse
     qa_chain = RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="stuff",
-        retriever=vector_store.as_retriever(search_kwargs={"k": 3}),
+        retriever=bm25_retriever,
         chain_type_kwargs={"prompt": minecraft_prompt}
     )
-    print("LangChain NPC System Active and Connected to Render!")
+    print("✓ LangChain NPC System Active with BM25 Search!")
     print(f"📊 Caching enabled: System Prompt + Response Cache")
 
 class ChatQuery(BaseModel):

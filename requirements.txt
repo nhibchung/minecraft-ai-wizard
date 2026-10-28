@@ -10,4 +10,3 @@ langchain-community>=0.4.0
 langchain-core>=0.3.0
 langchain-huggingface>=1.0.0
 langchain-groq>=0.1.0
-sentence-transformers>=3.0.0
