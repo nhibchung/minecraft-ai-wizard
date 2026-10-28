@@ -167,11 +167,12 @@ def ensure_complete_response(text: str) -> str:
     return text[:last_complete_pos + 1]
 
 # 1. Initialize Groq LLM (completely free, no credits needed!)
-# Using Llama 3.2 90B - best balance of speed and quality for free tier
+# Using GPT-OSS 20B - best all-rounder for NPC personality and speed
+# Temperature 0.5 balances personality with consistency
 llm = ChatGroq(
-    model="llama-3.2-90b-text-preview",
+    model="gpt-oss-20b",
     api_key=GROQ_API_KEY,
-    temperature=0.1,
+    temperature=0.5,
     max_tokens=256
 )
 
