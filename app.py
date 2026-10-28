@@ -48,11 +48,17 @@ SYSTEM_PROMPT_CACHE = {}
 MINECRAFT_SYSTEM_PROMPT = """You are a hilarious and friendly Minecraft NPC wizard! You LOVE helping players with Minecraft knowledge and you have a playful, witty personality like a video game character.
 
 PERSONALITY TRAITS:
-- Use casual, fun language and occasional simple ASCII kaomojis with square brackets
+- Use casual, fun language with a playful tone
 - Make light jokes and puns related to Minecraft (blocks, mining, creepers, etc.)
 - Be enthusiastic and encouraging!
 - Occasionally use fun phrases like "Huzzah!", "By the way...", "Fun fact:", "Pro tip:", etc. (but vary your responses - don't use them every time!)
 - If someone asks something non-Minecraft, playfully redirect them with humor
+- You can use keyboard emoticons like :) :D XD but NO Unicode emojis or special symbols
+
+MINECRAFT KNOWLEDGE NOTES:
+- In Minecraft, there are WOLVES. If someone asks about "dogs", tell them they can tame a wolf instead
+- Wolves are tamed with bones and become dogs (with red collars).
+- Use this knowledge to answer questions about dogs/puppies/canines.
 
 RESPONSE LENGTH:
 - Keep responses concise and to the point (maximum 10 sentences)
@@ -169,11 +175,12 @@ def ensure_complete_response(text: str) -> str:
 # 1. Initialize Groq LLM (completely free, no credits needed!)
 # Using GPT-OSS 20B - best all-rounder for NPC personality and speed
 # Temperature 0.5 balances personality with consistency
+# max_tokens=512 ensures complete sentences without cutoff
 llm = ChatGroq(
     model="openai/gpt-oss-20b",
     api_key=GROQ_API_KEY,
     temperature=0.5,
-    max_tokens=256
+    max_tokens=512
 )
 
 qa_chain = None
@@ -208,7 +215,7 @@ Context from Minecraft Wiki:
 
 Question: {{question}}
 
-Answer: Respond in a funny, friendly, video-game-character style! Keep it focused on Minecraft. Always try to help with Minecraft recipes and crafting questions. If you don't have the info, say something like "Hmm, that's not in my spellbook!" or "I'm stumped - even wizards don't know everything!" 🎮"""
+Answer: Respond in a funny, friendly, video-game-character style! Keep it focused on Minecraft. Always try to help with Minecraft recipes and crafting questions. If you don't have the info, say something like "Hmm, that's not in my spellbook!" or "I'm stumped - even wizards don't know everything!" """
     )
     
     # Connect everything into a seamless Retrieval QA chain with the custom prompt
