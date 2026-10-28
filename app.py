@@ -170,7 +170,7 @@ def ensure_complete_response(text: str) -> str:
 # Using GPT-OSS 20B - best all-rounder for NPC personality and speed
 # Temperature 0.5 balances personality with consistency
 llm = ChatGroq(
-    model="gpt-oss-20b",
+    model="openai/gpt-oss-20b",
     api_key=GROQ_API_KEY,
     temperature=0.5,
     max_tokens=256
