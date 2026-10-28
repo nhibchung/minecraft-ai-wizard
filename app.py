@@ -7,10 +7,11 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from datasets import load_dataset
-from langchain_huggingface import HuggingFaceEndpointEmbeddings, HuggingFaceEndpoint, ChatHuggingFace
+from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_classic.chains import RetrievalQA
 from langchain_core.prompts import PromptTemplate
+from langchain_groq import ChatGroq
 from dotenv import load_dotenv
 
 # Load local environment variables if testing on your computer
@@ -28,10 +29,14 @@ app.add_middleware(
 )
 
 HF_TOKEN = os.getenv("HF_TOKEN")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 INDEX_PATH = "faiss_minecraft_index"
 
 if not HF_TOKEN:
     print("WARNING: HF_TOKEN environment variable is missing!")
+
+if not GROQ_API_KEY:
+    print("WARNING: GROQ_API_KEY environment variable is missing!")
 
 # ============================================================================
 # CACHING CONFIGURATION (No external servers or paid services required!)
@@ -163,24 +168,20 @@ def ensure_complete_response(text: str) -> str:
     # Return text up to and including the last complete sentence
     return text[:last_complete_pos + 1]
 
-# 1. Initialize LangChain Serverless Embeddings API
-embeddings = HuggingFaceEndpointEmbeddings(
-    huggingfacehub_api_token=HF_TOKEN, 
-    model="sentence-transformers/all-MiniLM-L6-v2"
+# 1. Initialize LangChain Local Embeddings (no API credits required!)
+# Using sentence-transformers/all-MiniLM-L6-v2 - runs locally on CPU
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2"
 )
 
-# 2. Initialize LangChain Serverless Text Generation API (LLM)
-# Using Meta Llama 3.3 70B Instruct with conversational task for Groq provider compatibility
-base_llm = HuggingFaceEndpoint(
-    repo_id="meta-llama/Llama-3.3-70B-Instruct",
-    huggingfacehub_api_token=HF_TOKEN,
+# 2. Initialize Groq LLM (completely free, no credits needed!)
+# Using Llama 3.1 70B - fastest inference available
+llm = ChatGroq(
+    model="llama-3.1-70b-versatile",
+    api_key=GROQ_API_KEY,
     temperature=0.1,
-    max_new_tokens=256,
-    task="conversational"
+    max_tokens=256
 )
-
-# 3. Wrap with ChatHuggingFace to format messages correctly for Groq
-llm = ChatHuggingFace(llm=base_llm)
 
 qa_chain = None
 
