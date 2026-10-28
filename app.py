@@ -167,9 +167,9 @@ def ensure_complete_response(text: str) -> str:
     return text[:last_complete_pos + 1]
 
 # 1. Initialize Groq LLM (completely free, no credits needed!)
-# Using Llama 3.1 70B - fastest inference available
+# Using Llama 3.2 90B - best balance of speed and quality for free tier
 llm = ChatGroq(
-    model="llama-3.1-70b-versatile",
+    model="llama-3.2-90b-text-preview",
     api_key=GROQ_API_KEY,
     temperature=0.1,
     max_tokens=256
