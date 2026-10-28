@@ -171,10 +171,20 @@ def ensure_complete_response(text: str) -> str:
 # 1. Initialize LangChain Local Embeddings (no API credits required!)
 # Using sentence-transformers/all-MiniLM-L6-v2 - runs locally on CPU
 print("Initializing local embeddings...")
-embeddings = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
-)
-print("✓ Embedding model initialized")
+try:
+    # Pre-load the model to ensure it's available before app starts
+    import sentence_transformers
+    print("Pre-loading embedding model (this may take 30-60 seconds on first run)...")
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
+    )
+    print("✓ Embedding model loaded successfully")
+except ImportError:
+    print("ERROR: sentence-transformers not installed. Install with: pip install sentence-transformers")
+    raise
+except Exception as e:
+    print(f"ERROR: Failed to load embeddings: {e}")
+    raise
 
 # 2. Initialize Groq LLM (completely free, no credits needed!)
 # Using Llama 3.1 70B - fastest inference available
